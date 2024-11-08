@@ -4,95 +4,100 @@
  */
 package com.mycompany.proyecto2;
 
-/**
- *
- * @author Cesar Augusto
- */
-public class Arbol {
-    private NodoPersona raiz;  // La raíz del árbol genealógico
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import java.io.FileReader;
+import java.io.IOException;
 
-    // Constructor
+public class Arbol {
+    private NodoPersona raiz;
+    private Hash tablaHashPersonas;  // Tabla hash para búsqueda rápida
+
     public Arbol() {
         this.raiz = null;
+        this.tablaHashPersonas = new Hash();
     }
 
-    // Método para establecer la raíz del árbol
     public void establecerRaiz(NodoPersona persona) {
         this.raiz = persona;
     }
 
-    // Método para obtener la raíz del árbol
     public NodoPersona obtenerRaiz() {
         return raiz;
     }
 
-    // Método para agregar un nuevo NodoPersona al árbol
     public void agregarNodo(String nombrePadre, NodoPersona nuevoNodo) {
         NodoPersona padre = buscarNodo(nombrePadre, raiz);
         if (padre != null) {
-            padre.agregarHijo(nuevoNodo);  // Agrega el nuevo nodo como hijo del nodo padre
+            padre.agregarHijo(nuevoNodo);
         } else {
             System.out.println("El padre especificado no se encontró en el árbol.");
         }
     }
 
-    // Método de búsqueda en profundidad (DFS) para localizar un NodoPersona en el árbol por nombre completo
     private NodoPersona buscarNodo(String nombreCompleto, NodoPersona actual) {
         if (actual == null) return null;
-        
         if (actual.getNombreCompleto().equals(nombreCompleto)) return actual;
         
         NodoPersona resultado = null;
         ListaPersona hijos = actual.getHijos();
-        ListaPersona.Nodo nodoHijo = hijos.getCabeza(); // Accede a la cabeza de la lista
+        ListaPersona.Nodo nodoHijo = hijos.getCabeza();
 
-        // Recorremos la lista de hijos
         while (nodoHijo != null && resultado == null) {
-            resultado = buscarNodo(nombreCompleto, nodoHijo.getPersona());
-            nodoHijo = nodoHijo.getSiguiente();
+            resultado = buscarNodo(nombreCompleto, nodoHijo.persona);
+            nodoHijo = nodoHijo.siguiente;
         }
-
         return resultado;
     }
 
-    // Método para mostrar antepasados de un NodoPersona en el árbol, usando su nombre completo
-    public String mostrarAntepasados(String nombre) {
-        NodoPersona persona = buscarNodo(nombre, raiz);
-        if (persona == null) return "Integrante no encontrado.";
+    public void cargarArbolDesdeJSON(String rutaArchivo) {
+        try (FileReader reader = new FileReader(rutaArchivo)) {
+            Gson gson = new Gson();
+            JsonObject jsonObject = JsonParser.parseReader(reader).getAsJsonObject();
 
-        StringBuilder antepasados = new StringBuilder();
-        NodoPersona actual = persona.getPadre();
+            for (String nombreCasa : jsonObject.keySet()) {
+                JsonArray integrantes = jsonObject.getAsJsonArray(nombreCasa);
+                for (int i = 0; i < integrantes.size(); i++) {
+                    JsonObject integranteJson = integrantes.get(i).getAsJsonObject();
+                    for (String nombreCompleto : integranteJson.keySet()) {
+                        NodoPersona nuevoNodo = parsearNodoPersona(integranteJson, nombreCompleto);
+                        tablaHashPersonas.insertar(nuevoNodo);
+
+                        if (nuevoNodo.getPadre() == null) {
+                            establecerRaiz(nuevoNodo);
+                        } else {
+                            agregarNodo(nuevoNodo.getPadre().getNombreCompleto(), nuevoNodo);
+                        }
+                    }
+                }
+                System.out.println("Linaje cargado: " + nombreCasa);
+            }
+        } catch (IOException e) {
+            System.out.println("Error al leer el archivo: " + e.getMessage());
+        }
+    }
+
+    private NodoPersona parsearNodoPersona(JsonObject integranteJson, String nombreCompleto) {
+        String numeral = "", mote = "", tituloNobiliario = "", antecedentes = "";
+        NodoPersona padre = null;
+
+        JsonArray detalles = integranteJson.getAsJsonArray(nombreCompleto);
+        for (int j = 0; j < detalles.size(); j++) {
+            JsonObject detalle = detalles.get(j).getAsJsonObject();
+            if (detalle.has("Of his name")) numeral = detalle.get("Of his name").getAsString();
+            if (detalle.has("Born to")) padre = tablaHashPersonas.buscar(detalle.get("Born to").getAsString());
+            if (detalle.has("Known throughout as")) mote = detalle.get("Known throughout as").getAsString();
+            if (detalle.has("Held title")) tituloNobiliario = detalle.get("Held title").getAsString();
+            if (detalle.has("Notes")) antecedentes = detalle.get("Notes").getAsString();
+        }
         
-        while (actual != null) {
-            antepasados.append(actual.getNombreCompleto()).append(" -> ");
-            actual = actual.getPadre();
-        }
-
-        return antepasados.toString().isEmpty() ? "No tiene antepasados." : antepasados.toString();
-    }
-
-    // Método para mostrar la descendencia de un NodoPersona en el árbol, usando su nombre completo
-    public String mostrarDescendencia(String nombre) {
-        NodoPersona persona = buscarNodo(nombre, raiz);
-        if (persona == null) return "Integrante no encontrado.";
-
-        StringBuilder descendencia = new StringBuilder();
-        listarDescendientes(persona, descendencia, "");
-
-        return descendencia.toString();
-    }
-
-    // Método recursivo para listar descendientes en el árbol
-    private void listarDescendientes(NodoPersona persona, StringBuilder sb, String prefijo) {
-        sb.append(prefijo).append(persona.getNombreCompleto()).append("\n");
-
-        ListaPersona hijos = persona.getHijos();
-        ListaPersona.Nodo nodoHijo = hijos.getCabeza();
-
-        while (nodoHijo != null) {
-            listarDescendientes(nodoHijo.getPersona(), sb, prefijo + "  ");
-            nodoHijo = nodoHijo.getSiguiente();
-        }
+        NodoPersona nuevoNodo = new NodoPersona(nombreCompleto, numeral, padre, mote, tituloNobiliario, antecedentes);
+        tablaHashPersonas.insertar(nuevoNodo);
+        return nuevoNodo;
     }
 }
+
+
 
