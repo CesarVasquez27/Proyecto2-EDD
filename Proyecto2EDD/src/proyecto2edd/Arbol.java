@@ -21,7 +21,7 @@ import java.io.IOException;
 
 public class Arbol {
     private NodoPersona raiz;
-    private Hash tablaHashPersonas;  // Tabla hash para búsqueda rápida
+    private final Hash tablaHashPersonas;  // Tabla hash para búsqueda rápida
 
     public Arbol() {
         this.raiz = null;
