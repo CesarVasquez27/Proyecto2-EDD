@@ -9,48 +9,82 @@ package proyecto2edd;
  * @author Cesar Augusto
  */
 public class Hash {
-     // Tamaño inicial de la tabla hash
-    private final int TAMANO_TABLA = 100;
-    // Arreglo que representa la tabla hash de listas enlazadas
-    private ListaPersona[] tabla;
+    private final double FACTOR_CARGA = 0.75; // Factor de carga para redimensionar
+    private int numElementos = 0; // Número actual de elementos
+    private int tamanoTabla; // Tamaño actual de la tabla
+    private ListaPersona[] tabla; // Arreglo que representa la tabla hash
 
-    // Constructor
+    // Constructor inicializa la tabla con el tamaño inicial
     public Hash() {
-        // Inicializamos la tabla con un tamaño fijo de cubetas
-        tabla = new ListaPersona[TAMANO_TABLA];
-        for (int i = 0; i < TAMANO_TABLA; i++) {
-            tabla[i] = new ListaPersona();  // Inicializamos cada cubeta como una lista enlazada vacía
+        this.tamanoTabla = 100; // Tamaño inicial de la tabla
+        this.tabla = new ListaPersona[tamanoTabla];
+        inicializarCubetas();
+    }
+
+    // Método para inicializar las cubetas de la tabla
+    private void inicializarCubetas() {
+        for (int i = 0; i < tamanoTabla; i++) {
+            tabla[i] = new ListaPersona();
         }
     }
 
-    // Función hash: convierte el mote en un índice en la tabla
+    // Nueva función hash optimizada
     private int funcionHash(String clave) {
         int hash = 0;
         for (int i = 0; i < clave.length(); i++) {
-            hash = (31 * hash + clave.charAt(i)) % TAMANO_TABLA;
+            hash = (hash * 37 + clave.charAt(i)) & 0x7fffffff; // Usa un primer número diferente y evita valores negativos
         }
-        return Math.abs(hash);
+        return hash % tamanoTabla;
+    }
+
+    // Método para redimensionar la tabla cuando se supera el factor de carga
+    private void redimensionar() {
+        int nuevoTamano = tamanoTabla * 2;
+        ListaPersona[] nuevaTabla = new ListaPersona[nuevoTamano];
+        for (int i = 0; i < nuevoTamano; i++) {
+            nuevaTabla[i] = new ListaPersona();
+        }
+
+        // Rehash de todos los elementos en la nueva tabla
+        for (int i = 0; i < tamanoTabla; i++) {
+            ListaPersona lista = tabla[i];
+            ListaPersona.Nodo nodo = lista.getCabeza();
+            while (nodo != null) {
+                int nuevoIndice = funcionHash(nodo.persona.getMote()) % nuevoTamano;
+                nuevaTabla[nuevoIndice].agregar(nodo.persona);
+                nodo = nodo.siguiente;
+            }
+        }
+
+        // Actualizar la tabla y el tamaño
+        this.tabla = nuevaTabla;
+        this.tamanoTabla = nuevoTamano;
     }
 
     // Método para insertar un NodoPersona en la tabla de dispersión
     public void insertar(NodoPersona persona) {
-        String mote = persona.getMote();
-        int indice = funcionHash(mote);  // Calculamos el índice usando la función hash
-        tabla[indice].agregar(persona);  // Agregamos la persona a la lista enlazada de ese índice
+        if (numElementos >= tamanoTabla * FACTOR_CARGA) {
+            redimensionar(); // Redimensionar si se supera el factor de carga
+        }
+        
+        int indice = funcionHash(persona.getMote()); // Calculamos el índice usando la función hash
+        tabla[indice].agregar(persona); // Agregamos la persona a la lista enlazada de ese índice
+        numElementos++;
     }
 
     // Método para buscar un NodoPersona en la tabla de dispersión por su mote
     public NodoPersona buscar(String mote) {
-        int indice = funcionHash(mote);  // Calculamos el índice usando la función hash
-        return tabla[indice].buscar(mote);  // Buscamos en la lista enlazada de ese índice
+        int indice = funcionHash(mote); // Calculamos el índice usando la función hash
+        return tabla[indice].buscar(mote); // Buscamos en la lista enlazada de ese índice
     }
 
     // Método para eliminar un NodoPersona en la tabla de dispersión por su mote
     public void eliminar(String mote) {
-        int indice = funcionHash(mote);  // Calculamos el índice usando la función hash
+        int indice = funcionHash(mote); // Calculamos el índice usando la función hash
         NodoPersona persona = tabla[indice].buscar(mote);
         if (persona != null) {
-            tabla[indice].eliminar(persona);  // Eliminamos la persona de la lista enlazada de ese índice
+            tabla[indice].eliminar(persona); // Eliminamos la persona de la lista enlazada de ese índice
+            numElementos--;
         }
     }
 }
