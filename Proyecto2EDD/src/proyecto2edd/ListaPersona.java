@@ -107,4 +107,15 @@ public class ListaPersona {
     public int getSize() {
         return size;
     }
+    
+    public boolean contiene(NodoPersona persona) {
+    Nodo actual = cabeza; // Cabeza de la lista enlazada
+    while (actual != null) {
+        if (actual.persona.equals(persona)) {
+            return true; // Encontramos la persona
+        }
+        actual = actual.siguiente; // Pasar al siguiente nodo
+    }
+    return false; // No se encontró la persona
+    }
 }

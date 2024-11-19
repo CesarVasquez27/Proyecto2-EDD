@@ -77,7 +77,15 @@ public class Hash {
         int indice = funcionHash(mote); // Calculamos el índice usando la función hash
         return tabla[indice].buscar(mote); // Buscamos en la lista enlazada de ese índice
     }
-
+    
+    // Método para verificar si una persona está en la tabla hash (nuevo)
+    public boolean contiene(String mote) {
+        int indice = funcionHash(mote); // Calculamos el índice usando la función hash
+        NodoPersona persona = tabla[indice].buscar(mote); // Buscar en la lista enlazada del índice
+        return persona != null; // Si no es null, entonces existe
+    }
+    
+    
     // Método para eliminar un NodoPersona en la tabla de dispersión por su mote
     public void eliminar(String mote) {
         int indice = funcionHash(mote); // Calculamos el índice usando la función hash

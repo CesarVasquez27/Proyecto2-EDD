@@ -101,4 +101,16 @@ public class NodoPersona {
         return "Nombre: " + nombreCompleto + " " + numeral + ", Mote: " + mote +
                ", Título: " + tituloNobiliario + ", Antecedentes: " + antecedentes;
     }
+    
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        NodoPersona otraPersona = (NodoPersona) obj;
+        return nombreCompleto.equals(otraPersona.nombreCompleto); // Comparar por nombre completo
+    }
+    @Override
+    public int hashCode() {
+        return nombreCompleto.hashCode(); // Usar nombreCompleto para el hash
+    }
 }

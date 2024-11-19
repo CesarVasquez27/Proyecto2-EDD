@@ -91,63 +91,85 @@ public class Arbol {
     }
 
     private NodoPersona parsearNodoPersona(JsonObject integranteJson, String nombreCompleto) {
-        String numeral = "", mote = "", tituloNobiliario = "", antecedentes = "";
-        NodoPersona padre = null;
-        ListaPersona padres = new ListaPersona();
-        ListaPersona hijos = new ListaPersona();
+    String numeral = "", mote = "", tituloNobiliario = "", antecedentes = "";
+    NodoPersona nuevoNodo = tablaHashPersonas.buscar(nombreCompleto); // Buscar si ya existe
 
-        JsonArray detalles = integranteJson.getAsJsonArray(nombreCompleto);
-        for (int j = 0; j < detalles.size(); j++) {
-            JsonObject detalle = detalles.get(j).getAsJsonObject();
-            if (detalle.has("Of his name")) numeral = detalle.get("Of his name").getAsString();
-            if (detalle.has("Born to")) {
-                String nombrePadre = detalle.get("Born to").getAsString();
-                padre = tablaHashPersonas.buscar(nombrePadre);
-                if (padre != null) {
-                    padres.agregar(padre);
-                } else {
-                    padre = new NodoPersona(nombrePadre, "", null, "", "", "");
-                    tablaHashPersonas.insertar(padre);
-                    padres.agregar(padre);
-                }
+    if (nuevoNodo == null) { // Solo creamos si no existe
+        nuevoNodo = new NodoPersona(nombreCompleto, numeral, null, mote, tituloNobiliario, antecedentes);
+    }
+
+    ListaPersona padres = new ListaPersona();
+    ListaPersona hijos = new ListaPersona();
+
+    JsonArray detalles = integranteJson.getAsJsonArray(nombreCompleto);
+    for (int j = 0; j < detalles.size(); j++) {
+        JsonObject detalle = detalles.get(j).getAsJsonObject();
+        if (detalle.has("Of his name")) numeral = detalle.get("Of his name").getAsString();
+        if (detalle.has("Known throughout as")) mote = detalle.get("Known throughout as").getAsString();
+        if (detalle.has("Held title")) tituloNobiliario = detalle.get("Held title").getAsString();
+        if (detalle.has("Notes")) antecedentes = detalle.get("Notes").getAsString();
+
+        // Procesar padres
+        if (detalle.has("Born to")) {
+            String nombrePadre = detalle.get("Born to").getAsString();
+            NodoPersona padre = tablaHashPersonas.buscar(nombrePadre);
+            if (padre == null) { // Crear si no existe
+                padre = new NodoPersona(nombrePadre, "", null, "", "", "");
+                tablaHashPersonas.insertar(padre);
             }
-            if (detalle.has("Known throughout as")) mote = detalle.get("Known throughout as").getAsString();
-            if (detalle.has("Held title")) tituloNobiliario = detalle.get("Held title").getAsString();
-            if (detalle.has("Father to")) {
-                JsonArray hijosArray = detalle.getAsJsonArray("Father to");
-                for (int k = 0; k < hijosArray.size(); k++) {
-                    String nombreHijo = hijosArray.get(k).getAsString();
-                    NodoPersona hijo = tablaHashPersonas.buscar(nombreHijo);
-                    if (hijo == null) {
-                        hijo = new NodoPersona(nombreHijo, "", null, "", "", "");
-                        tablaHashPersonas.insertar(hijo);
-                    }
-                    hijos.agregar(hijo);
-                }
-            }
-            if (detalle.has("Notes")) antecedentes = detalle.get("Notes").getAsString();
+            padres.agregar(padre);
         }
-        
-        NodoPersona nuevoNodo = new NodoPersona(nombreCompleto, numeral, null, mote, tituloNobiliario, antecedentes);
-        // Relacionar padres con el nuevo nodo
-        ListaPersona.Nodo nodoPadre = padres.getCabeza();
-        while (nodoPadre != null) {
-            NodoPersona padre = nodoPadre.getPersona();
-            nuevoNodo.setPadre(padre);
+
+        // Procesar hijos
+        if (detalle.has("Father to")) {
+            JsonArray hijosArray = detalle.getAsJsonArray("Father to");
+            for (int k = 0; k < hijosArray.size(); k++) {
+                String nombreHijo = hijosArray.get(k).getAsString();
+                NodoPersona hijo = tablaHashPersonas.buscar(nombreHijo);
+                if (hijo == null) { // Crear si no existe
+                    hijo = new NodoPersona(nombreHijo, "", null, "", "", "");
+                    tablaHashPersonas.insertar(hijo);
+                }
+                hijos.agregar(hijo);
+            }
+        }
+    }
+
+    // Relacionar padres con el nuevo nodo
+    ListaPersona.Nodo nodoPadre = padres.getCabeza();
+    while (nodoPadre != null) {
+        NodoPersona padre = nodoPadre.getPersona();
+        if (!padre.getHijos().contiene(nuevoNodo)) { // Evitar duplicados en hijos
             padre.agregarHijo(nuevoNodo);
-            nodoPadre = nodoPadre.getSiguiente();
         }
-        // Guardar el nodo en la tabla hash
-        tablaHashPersonas.insertar(nuevoNodo);
-        // Relacionar hijos con el nuevo nodo
-        ListaPersona.Nodo nodoHijo = hijos.getCabeza();
-        while (nodoHijo != null) {
-            NodoPersona hijo = nodoHijo.getPersona();
+        nodoPadre = nodoPadre.getSiguiente();
+    }
+
+    // Relacionar hijos con el nuevo nodo
+    ListaPersona.Nodo nodoHijo = hijos.getCabeza();
+    while (nodoHijo != null) {
+        NodoPersona hijo = nodoHijo.getPersona();
+        if (hijo.getPadre() == null) { // Solo asignar si no tiene padre
             hijo.setPadre(nuevoNodo);
-            nuevoNodo.agregarHijo(hijo);
-            nodoHijo = nodoHijo.getSiguiente();
         }
-        return nuevoNodo;
+        if (!nuevoNodo.getHijos().contiene(hijo)) { // Evitar duplicados
+            nuevoNodo.agregarHijo(hijo);
+        }
+        nodoHijo = nodoHijo.getSiguiente();
+    }
+
+    // Actualizar atributos del nodo con la información obtenida
+    nuevoNodo.setNumeral(numeral);
+    nuevoNodo.setMote(mote);
+    nuevoNodo.setTituloNobiliario(tituloNobiliario);
+    nuevoNodo.setAntecedentes(antecedentes);
+
+    // Insertar en la tabla hash si no estaba previamente
+    if (!tablaHashPersonas.contiene(nombreCompleto)) {
+        tablaHashPersonas.insertar(nuevoNodo);
+    }
+
+    return nuevoNodo;
     }
 
     public void mostrarArbolGraficamente() {
