@@ -10,7 +10,7 @@ package proyecto2edd;
  */
 /**
  *
- * @author Cesar Augusto, Christian
+ * @author Cesar Augusto, Christian Goncalves, Tomas Paraco
  */
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -23,7 +23,7 @@ import org.graphstream.graph.implementations.SingleGraph;
 
 public class Arbol {
     private NodoPersona raiz;
-    private Hash tablaHashPersonas;  // Tabla hash para búsqueda rápida
+    private final Hash tablaHashPersonas;  // Tabla hash para búsqueda rápida
 
     public Arbol() {
         this.raiz = null;
@@ -50,7 +50,7 @@ public class Arbol {
     private NodoPersona buscarNodo(String nombreCompleto, NodoPersona actual) {
         if (actual == null) return null;
         if (actual.getNombreCompleto().equals(nombreCompleto)) return actual;
-        
+
         NodoPersona resultado = null;
         ListaPersona hijos = actual.getHijos();
         ListaPersona.Nodo nodoHijo = hijos.getCabeza();
@@ -64,7 +64,6 @@ public class Arbol {
 
     public void cargarArbolDesdeJSON(String rutaArchivo) {
         try (FileReader reader = new FileReader(rutaArchivo)) {
-            Gson gson = new Gson();
             JsonObject jsonObject = JsonParser.parseReader(reader).getAsJsonObject();
 
             for (String nombreCasa : jsonObject.keySet()) {
@@ -73,12 +72,14 @@ public class Arbol {
                     JsonObject integranteJson = integrantes.get(i).getAsJsonObject();
                     for (String nombreCompleto : integranteJson.keySet()) {
                         NodoPersona nuevoNodo = parsearNodoPersona(integranteJson, nombreCompleto);
-                        tablaHashPersonas.insertar(nuevoNodo);
+                        if (!tablaHashPersonas.contiene(nuevoNodo.getNombreCompleto())) {
+                            tablaHashPersonas.insertar(nuevoNodo);
 
-                        if (nuevoNodo.getPadre() == null) {
-                            establecerRaiz(nuevoNodo);
-                        } else {
-                            agregarNodo(nuevoNodo.getPadre().getNombreCompleto(), nuevoNodo);
+                            if (nuevoNodo.getPadre() == null) {
+                                establecerRaiz(nuevoNodo);
+                            } else {
+                                agregarNodo(nuevoNodo.getPadre().getNombreCompleto(), nuevoNodo);
+                            }
                         }
                     }
                 }
@@ -91,7 +92,7 @@ public class Arbol {
 
     private NodoPersona parsearNodoPersona(JsonObject integranteJson, String nombreCompleto) {
         String numeral = "", mote = "", tituloNobiliario = "", antecedentes = "";
-         NodoPersona nuevoNodo;
+        NodoPersona padre = null;
         ListaPersona padres = new ListaPersona();
         ListaPersona hijos = new ListaPersona();
 
@@ -101,7 +102,7 @@ public class Arbol {
             if (detalle.has("Of his name")) numeral = detalle.get("Of his name").getAsString();
             if (detalle.has("Born to")) {
                 String nombrePadre = detalle.get("Born to").getAsString();
-                NodoPersona padre = tablaHashPersonas.buscar(nombrePadre);
+                padre = tablaHashPersonas.buscar(nombrePadre);
                 if (padre != null) {
                     padres.agregar(padre);
                 } else {
@@ -126,10 +127,8 @@ public class Arbol {
             }
             if (detalle.has("Notes")) antecedentes = detalle.get("Notes").getAsString();
         }
-
-        // Aqui se crea el nuevo nodo
-        nuevoNodo = new NodoPersona(nombreCompleto, numeral, null, mote, tituloNobiliario, antecedentes);
-
+        
+        NodoPersona nuevoNodo = new NodoPersona(nombreCompleto, numeral, null, mote, tituloNobiliario, antecedentes);
         // Relacionar padres con el nuevo nodo
         ListaPersona.Nodo nodoPadre = padres.getCabeza();
         while (nodoPadre != null) {
@@ -138,10 +137,8 @@ public class Arbol {
             padre.agregarHijo(nuevoNodo);
             nodoPadre = nodoPadre.getSiguiente();
         }
-
         // Guardar el nodo en la tabla hash
         tablaHashPersonas.insertar(nuevoNodo);
-
         // Relacionar hijos con el nuevo nodo
         ListaPersona.Nodo nodoHijo = hijos.getCabeza();
         while (nodoHijo != null) {
@@ -150,42 +147,36 @@ public class Arbol {
             nuevoNodo.agregarHijo(hijo);
             nodoHijo = nodoHijo.getSiguiente();
         }
-
         return nuevoNodo;
-        }
+    }
 
     public void mostrarArbolGraficamente() {
         if (raiz == null) {
             System.out.println("No hay un árbol cargado para mostrar.");
             return;
         }
-
         Graph grafo = new SingleGraph("Árbol Genealógico");
         grafo.setStrict(false);
         grafo.setAutoCreate(true);
-
         agregarNodosYEnlacesGraficamente(raiz, grafo);
         grafo.display();
     }
 
     private void agregarNodosYEnlacesGraficamente(NodoPersona nodo, Graph grafo) {
         if (nodo == null) return;
-
         String nodoId = nodo.getNombreCompleto();
         grafo.addNode(nodoId).setAttribute("ui.label", nodo.getNombreCompleto());
-
         ListaPersona hijos = nodo.getHijos();
         ListaPersona.Nodo nodoHijo = hijos.getCabeza();
-
         while (nodoHijo != null) {
             NodoPersona hijo = nodoHijo.persona;
             String hijoId = hijo.getNombreCompleto();
             
             grafo.addNode(hijoId).setAttribute("ui.label", hijo.getNombreCompleto());
             grafo.addEdge(nodoId + "-" + hijoId, nodoId, hijoId);
-
             agregarNodosYEnlacesGraficamente(hijo, grafo);
             nodoHijo = nodoHijo.siguiente;
         }
     }
 }
+
