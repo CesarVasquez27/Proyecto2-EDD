@@ -291,6 +291,69 @@ public class Arbol {
         // Mostrar el grafo
         grafo.display();
     }
+    
+    /**
+    * Busca y muestra los registros que tienen un título nobiliario específico.
+    * @param tituloNobiliario Título nobiliario a buscar.
+    */
+    public void buscarPorTitulo(String tituloNobiliario) {
+        if (raiz == null) {
+            System.out.println("El árbol genealógico no ha sido cargado.");
+            return;
+        }
 
+        // Crear una lista para almacenar los resultados de la búsqueda
+        ListaPersona resultados = new ListaPersona();
+
+        // Realizar una búsqueda recursiva en el árbol
+        buscarPorTituloRecursivo(raiz, tituloNobiliario, resultados);
+
+        // Verificar si hay resultados
+        if (resultados.estaVacia()) {
+            System.out.println("No se encontraron registros con el título: " + tituloNobiliario);
+            return;
+        }
+
+        // Mostrar los resultados gráficamente
+        Graph grafo = new SingleGraph("Registros con título: " + tituloNobiliario);
+        grafo.setStrict(false);
+        grafo.setAutoCreate(true);
+
+        // Agregar nodos y enlaces al grafo
+        ListaPersona.Nodo nodoResultado = resultados.getCabeza();
+        while (nodoResultado != null) {
+            NodoPersona persona = nodoResultado.getPersona();
+            String nodoId = persona.getNombreCompleto();
+
+            grafo.addNode(nodoId).setAttribute("ui.label", persona.getNombreCompleto());
+            nodoResultado = nodoResultado.getSiguiente();
+        }
+
+        // Mostrar el grafo
+        grafo.display();
+    }
+
+    /**
+    * Método recursivo para buscar nodos con un título nobiliario específico.
+    * @param nodo Nodo actual del árbol.
+    * @param tituloNobiliario Título a buscar.
+    * @param resultados Lista donde se almacenan los nodos encontrados.
+    */
+    private void buscarPorTituloRecursivo(NodoPersona nodo, String tituloNobiliario, ListaPersona resultados) {
+        if (nodo == null) return;
+
+        // Comparar el título del nodo actual
+        if (nodo.getTituloNobiliario().equalsIgnoreCase(tituloNobiliario)) {
+            resultados.agregar(nodo);
+        }
+
+        // Continuar buscando en los hijos
+        ListaPersona hijos = nodo.getHijos();
+        ListaPersona.Nodo nodoHijo = hijos.getCabeza();
+        while (nodoHijo != null) {
+            buscarPorTituloRecursivo(nodoHijo.getPersona(), tituloNobiliario, resultados);
+            nodoHijo = nodoHijo.getSiguiente();
+        }
+    }
 }
 
