@@ -14,6 +14,7 @@ package proyecto2edd;
  */
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import java.io.FileReader;
 import java.io.IOException;
@@ -60,12 +61,18 @@ public class Arbol {
         }
         return resultado;
     }
-
+    
     public void cargarArbolDesdeJSON(String rutaArchivo) {
         try (FileReader reader = new FileReader(rutaArchivo)) {
             // Utilizar Gson para deserializar
             Gson gson = new Gson();
             JsonObject jsonObject = gson.fromJson(reader, JsonObject.class);
+
+            // Validar que el JSON es válido antes de procesarlo
+            if (!validarJSON(jsonObject)) {
+                System.out.println("El archivo JSON tiene datos malformados. Por favor, revisa su contenido.");
+                return;
+            }
 
             for (String nombreCasa : jsonObject.keySet()) {
                 JsonArray integrantes = jsonObject.getAsJsonArray(nombreCasa);
@@ -89,6 +96,65 @@ public class Arbol {
         } catch (IOException e) {
             System.out.println("Error al leer el archivo: " + e.getMessage());
         }
+    }
+
+    /**
+    * Método para validar que el archivo JSON tenga el formato esperado.
+    */
+    private boolean validarJSON(JsonObject jsonObject) {
+        for (String nombreCasa : jsonObject.keySet()) {
+            JsonElement casaElement = jsonObject.get(nombreCasa);
+
+            // Validar que cada casa contiene un arreglo
+            if (!casaElement.isJsonArray()) {
+                System.err.println("Error: '" + nombreCasa + "' no contiene un arreglo válido.");
+                return false;
+            }
+
+            JsonArray integrantes = casaElement.getAsJsonArray();
+            for (JsonElement integranteElement : integrantes) {
+                if (!integranteElement.isJsonObject()) {
+                    System.err.println("Error: Uno de los integrantes en '" + nombreCasa + "' no es un objeto válido.");
+                    return false;
+                }
+
+                JsonObject integrante = integranteElement.getAsJsonObject();
+                for (String nombreCompleto : integrante.keySet()) {
+                    JsonElement datosIntegrante = integrante.get(nombreCompleto);
+
+                    // Validar que los datos del integrante son un objeto JSON
+                    if (!datosIntegrante.isJsonObject()) {
+                        System.err.println("Error: Los datos de '" + nombreCompleto + "' no son un objeto JSON válido.");
+                        return false;
+                    }
+
+                    JsonObject datos = datosIntegrante.getAsJsonObject();
+
+                    // Validar campos obligatorios
+                    if (!datos.has("name") || !datos.get("name").isJsonPrimitive()) {
+                        System.err.println("Error: El integrante '" + nombreCompleto + "' no tiene un nombre válido.");
+                        return false;
+                    }
+
+                    // Validar campos opcionales y listas
+                    if (datos.has("age") && !datos.get("age").isJsonPrimitive()) {
+                        System.err.println("Error: La edad de '" + nombreCompleto + "' no es válida.");
+                        return false;
+                    }
+
+                    if (datos.has("description") && !datos.get("description").isJsonPrimitive()) {
+                        System.err.println("Error: La descripción de '" + nombreCompleto + "' no es válida.");
+                        return false;
+                    }
+
+                    if (datos.has("Father to") && !datos.get("Father to").isJsonArray()) {
+                        System.err.println("Error: 'Father to' de '" + nombreCompleto + "' no es un arreglo válido.");
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
     }
 
     private NodoPersona parsearNodoPersona(JsonObject integranteJson, String nombreCompleto) {
@@ -354,6 +420,67 @@ public class Arbol {
             buscarPorTituloRecursivo(nodoHijo.getPersona(), tituloNobiliario, resultados);
             nodoHijo = nodoHijo.getSiguiente();
         }
+    }
+    
+    /**
+    * Obtiene la lista de integrantes de una generación específica dentro del árbol genealógico.
+    * @param nivelGeneracion El nivel de la generación a buscar (0 para la raíz, 1 para los hijos, etc.).
+    * @return ListaPersona con los integrantes de la generación solicitada.
+    */
+    public ListaPersona obtenerIntegrantesDeGeneracion(int nivelGeneracion) {
+        ListaPersona integrantes = new ListaPersona(); // Lista para almacenar los resultados
+        if (raiz == null) {
+            System.out.println("El árbol está vacío.");
+            return integrantes;
+        }
+
+        // Implementación manual de una cola
+        ListaPersona cola = new ListaPersona(); // Cola para el recorrido por niveles
+        ListaPersona.Nodo nodoCola; // Nodo para recorrer la cola
+        cola.agregar(raiz); // Agregamos la raíz como punto inicial
+        int nivelActual = 0;
+
+        while (!cola.estaVacia()) {
+            int tamañoNivel = 0;
+
+            // Contamos los nodos en la cola (tamaño del nivel actual)
+            nodoCola = cola.getCabeza();
+            while (nodoCola != null) {
+                tamañoNivel++;
+                nodoCola = nodoCola.getSiguiente();
+            }
+
+            // Si el nivel actual es el solicitado, añadimos los nodos al resultado
+            if (nivelActual == nivelGeneracion) {
+                nodoCola = cola.getCabeza();
+                while (nodoCola != null) {
+                    integrantes.agregar(nodoCola.persona); // Agregar todos los nodos actuales a la lista de resultados
+                    nodoCola = nodoCola.getSiguiente();
+                }
+                break; // Terminamos porque ya encontramos la generación solicitada
+            }
+
+            // Avanzamos al siguiente nivel: procesamos los nodos actuales y añadimos sus hijos a la cola
+            ListaPersona nuevaCola = new ListaPersona(); // Para almacenar los hijos del nivel actual
+            nodoCola = cola.getCabeza();
+            while (nodoCola != null) {
+                ListaPersona hijos = nodoCola.persona.getHijos();
+                ListaPersona.Nodo nodoHijo = hijos.getCabeza();
+                while (nodoHijo != null) {
+                    nuevaCola.agregar(nodoHijo.persona); // Añadir los hijos a la nueva cola
+                    nodoHijo = nodoHijo.getSiguiente();
+                }
+                nodoCola = nodoCola.getSiguiente();
+            }
+            cola = nuevaCola; // Actualizamos la cola al siguiente nivel
+            nivelActual++;
+        }
+
+        if (integrantes.estaVacia()) {
+            System.out.println("No se encontraron integrantes en la generación " + nivelGeneracion + ".");
+        }
+
+        return integrantes;
     }
 }
 
