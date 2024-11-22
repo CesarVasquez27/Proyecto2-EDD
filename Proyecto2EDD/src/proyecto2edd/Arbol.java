@@ -157,7 +157,7 @@ public class Arbol {
         return true;
     }
 
-    private NodoPersona parsearNodoPersona(JsonObject integranteJson, String nombreCompleto) {
+private NodoPersona parsearNodoPersona(JsonObject integranteJson, String nombreCompleto) {
     // Valores por defecto
     String numeral = "Desconocido";
     String mote = "Sin apodo";
@@ -238,7 +238,10 @@ public class Arbol {
     }
 
     return nuevoNodo;
-    }
+}
+
+
+    
 
     /**
     * Actualiza las relaciones del nodo con sus padres e hijos evitando duplicados.
