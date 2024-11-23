@@ -7,9 +7,6 @@ package proyecto2edd;
 import org.graphstream.graph.Graph;
 import org.graphstream.graph.implementations.SingleGraph;
 import org.graphstream.ui.view.Viewer;
-import org.graphstream.ui.swingViewer.SwingViewer;
-import org.graphstream.ui.swingViewer.ViewPanel;
-
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -18,6 +15,8 @@ import java.io.FileReader;
 import java.io.IOException;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import org.graphstream.ui.swing_viewer.SwingViewer;
+import org.graphstream.ui.swing_viewer.ViewPanel;
 
 /**
  *
