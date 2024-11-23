@@ -71,117 +71,95 @@ public class Arbol {
 
     
     public void cargarArbolDesdeJSON(String rutaArchivo) {
-        try (FileReader reader = new FileReader(rutaArchivo)) {
-            // Utilizar Gson para deserializar
-            Gson gson = new Gson();
-            JsonObject jsonObject = gson.fromJson(reader, JsonObject.class);
+    try (FileReader reader = new FileReader(rutaArchivo)) {
+        Gson gson = new Gson();
+        JsonObject jsonObject = gson.fromJson(reader, JsonObject.class);
 
-            // Validar que el JSON es válido antes de procesarlo
-            if (!validarJSON(jsonObject)) {
-                System.out.println("El archivo JSON tiene datos malformados. Por favor, revisa su contenido.");
-                return;
-            }
+        if (!validarJSON(jsonObject)) {
+            System.out.println("El archivo JSON tiene datos malformados. Por favor, revisa su contenido.");
+            return;
+        }
 
-            for (String nombreCasa : jsonObject.keySet()) {
-                JsonArray integrantes = jsonObject.getAsJsonArray(nombreCasa);
-                for (int i = 0; i < integrantes.size(); i++) {
-                    JsonObject integranteJson = integrantes.get(i).getAsJsonObject();
-                    for (String nombreCompleto : integranteJson.keySet()) {
-                        NodoPersona nuevoNodo = parsearNodoPersona(integranteJson, nombreCompleto);
-                        if (!tablaHashPersonas.contiene(nuevoNodo.getNombreCompleto())) {
-                            tablaHashPersonas.insertar(nuevoNodo);
+        for (String nombreCasa : jsonObject.keySet()) {
+            JsonArray integrantes = jsonObject.getAsJsonArray(nombreCasa);
+            for (int i = 0; i < integrantes.size(); i++) {
+                JsonObject integranteJson = integrantes.get(i).getAsJsonObject();
+                for (String nombreCompleto : integranteJson.keySet()) {
+                    NodoPersona nuevoNodo = parsearNodoPersona(integranteJson, nombreCompleto);
+                    if (!tablaHashPersonas.contiene(nuevoNodo.getNombreCompleto())) {
+                        tablaHashPersonas.insertar(nuevoNodo);
 
-                            if (nuevoNodo.getPadre() == null) {
-                                establecerRaiz(nuevoNodo);
-                            } else {
-                                agregarNodo(nuevoNodo.getPadre().getNombreCompleto(), nuevoNodo);
-                            }
+                        if (nuevoNodo.getPadre() == null) {
+                            establecerRaiz(nuevoNodo);
+                        } else {
+                            agregarNodo(nuevoNodo.getPadre().getNombreCompleto(), nuevoNodo);
                         }
                     }
                 }
-                System.out.println("Linaje cargado: " + nombreCasa);
             }
-        } catch (IOException e) {
-            System.out.println("Error al leer el archivo: " + e.getMessage());
+            System.out.println("Linaje cargado: " + nombreCasa);
         }
+    } catch (IOException e) {
+        System.out.println("Error al leer el archivo: " + e.getMessage());
     }
+}
 
     /**
     * Método para validar que el archivo JSON tenga el formato esperado.
     */
     private boolean validarJSON(JsonObject jsonObject) {
-        for (String nombreCasa : jsonObject.keySet()) {
-            JsonElement casaElement = jsonObject.get(nombreCasa);
+    for (String nombreCasa : jsonObject.keySet()) {
+        JsonElement casaElement = jsonObject.get(nombreCasa);
 
-            // Validar que cada casa contiene un arreglo
-            if (!casaElement.isJsonArray()) {
-                System.err.println("Error: '" + nombreCasa + "' no contiene un arreglo válido.");
+        if (!casaElement.isJsonArray()) {
+            System.err.println("Error: '" + nombreCasa + "' no contiene un arreglo válido.");
+            return false;
+        }
+
+        JsonArray integrantes = casaElement.getAsJsonArray();
+        for (JsonElement integranteElement : integrantes) {
+            if (!integranteElement.isJsonObject()) {
+                System.err.println("Error: Uno de los integrantes en '" + nombreCasa + "' no es un objeto válido.");
                 return false;
             }
 
-            JsonArray integrantes = casaElement.getAsJsonArray();
-            for (JsonElement integranteElement : integrantes) {
-                if (!integranteElement.isJsonObject()) {
-                    System.err.println("Error: Uno de los integrantes en '" + nombreCasa + "' no es un objeto válido.");
+            JsonObject integrante = integranteElement.getAsJsonObject();
+            for (String nombreCompleto : integrante.keySet()) {
+                JsonElement datosIntegrante = integrante.get(nombreCompleto);
+
+                if (!datosIntegrante.isJsonObject()) {
+                    System.err.println("Error: Los datos de '" + nombreCompleto + "' no son un objeto JSON válido.");
                     return false;
                 }
 
-                JsonObject integrante = integranteElement.getAsJsonObject();
-                for (String nombreCompleto : integrante.keySet()) {
-                    JsonElement datosIntegrante = integrante.get(nombreCompleto);
+                JsonObject datos = datosIntegrante.getAsJsonObject();
 
-                    // Validar que los datos del integrante son un objeto JSON
-                    if (!datosIntegrante.isJsonObject()) {
-                        System.err.println("Error: Los datos de '" + nombreCompleto + "' no son un objeto JSON válido.");
-                        return false;
-                    }
-
-                    JsonObject datos = datosIntegrante.getAsJsonObject();
-
-                    // Validar campos obligatorios
-                    if (!datos.has("name") || !datos.get("name").isJsonPrimitive()) {
-                        System.err.println("Error: El integrante '" + nombreCompleto + "' no tiene un nombre válido.");
-                        return false;
-                    }
-
-                    // Validar campos opcionales y listas
-                    if (datos.has("age") && !datos.get("age").isJsonPrimitive()) {
-                        System.err.println("Error: La edad de '" + nombreCompleto + "' no es válida.");
-                        return false;
-                    }
-
-                    if (datos.has("description") && !datos.get("description").isJsonPrimitive()) {
-                        System.err.println("Error: La descripción de '" + nombreCompleto + "' no es válida.");
-                        return false;
-                    }
-
-                    if (datos.has("Father to") && !datos.get("Father to").isJsonArray()) {
-                        System.err.println("Error: 'Father to' de '" + nombreCompleto + "' no es un arreglo válido.");
-                        return false;
-                    }
+                if (!datos.has("Of his name") || !datos.get("Of his name").isJsonPrimitive()) {
+                    System.err.println("Error: El integrante '" + nombreCompleto + "' no tiene un nombre válido.");
+                    return false;
                 }
+
+                // Validar otros campos opcionales aquí según tu modelo
             }
         }
-        return true;
     }
+    return true;
+}
+
 
     // En el método parsearNodoPersona de la clase Arbol
 private NodoPersona parsearNodoPersona(JsonObject integranteJson, String nombreCompleto) {
-    // Valores por defecto
     String numeral = "Desconocido";
     String mote = "Sin apodo";
     String tituloNobiliario = "Sin título";
     String antecedentes = "Sin antecedentes";
 
-    // Buscar si ya existe el nodo
     NodoPersona nuevoNodo = tablaHashPersonas.buscar(nombreCompleto);
 
-    if (nuevoNodo == null) { 
-        // Crear el nodo si no existe
+    if (nuevoNodo == null) {
         nuevoNodo = new NodoPersona(nombreCompleto, numeral, null, mote, tituloNobiliario, antecedentes);
     }
 
-    // Listas para padres e hijos
     ListaPersona padres = new ListaPersona();
     ListaPersona hijos = new ListaPersona();
 
@@ -194,26 +172,23 @@ private NodoPersona parsearNodoPersona(JsonObject integranteJson, String nombreC
     for (int j = 0; j < detalles.size(); j++) {
         JsonObject detalle = detalles.get(j).getAsJsonObject();
 
-        // Asignar valores si existen, si no, se usan los valores por defecto
         if (detalle.has("Of his name")) numeral = detalle.get("Of his name").getAsString();
         if (detalle.has("Known throughout as")) mote = detalle.get("Known throughout as").getAsString();
         if (detalle.has("Held title")) tituloNobiliario = detalle.get("Held title").getAsString();
         if (detalle.has("Notes")) antecedentes = detalle.get("Notes").getAsString();
 
-        // Procesar padres
         if (detalle.has("Born to")) {
             String nombrePadre = detalle.get("Born to").getAsString();
             if (!nombrePadre.isEmpty()) {
                 NodoPersona padre = tablaHashPersonas.buscar(nombrePadre);
-                if (padre == null) { 
+                if (padre == null) {
                     padre = new NodoPersona(nombrePadre, "Desconocido", null, "Sin apodo", "Sin título", "Sin antecedentes");
-                    tablaHashPersonas.insertar(padre); // Insertar en la tabla hash
+                    tablaHashPersonas.insertar(padre);
                 }
                 padres.agregar(padre);
             }
         }
 
-        // Procesar hijos
         if (detalle.has("Father to")) {
             JsonArray hijosArray = detalle.getAsJsonArray("Father to");
             if (hijosArray != null) {
@@ -221,9 +196,9 @@ private NodoPersona parsearNodoPersona(JsonObject integranteJson, String nombreC
                     String nombreHijo = hijosArray.get(k).getAsString();
                     if (!nombreHijo.isEmpty()) {
                         NodoPersona hijo = tablaHashPersonas.buscar(nombreHijo);
-                        if (hijo == null) { 
+                        if (hijo == null) {
                             hijo = new NodoPersona(nombreHijo, "Desconocido", null, "Sin apodo", "Sin título", "Sin antecedentes");
-                            tablaHashPersonas.insertar(hijo); // Insertar en la tabla hash
+                            tablaHashPersonas.insertar(hijo);
                         }
                         hijos.agregar(hijo);
                     }
@@ -232,16 +207,13 @@ private NodoPersona parsearNodoPersona(JsonObject integranteJson, String nombreC
         }
     }
 
-    // Actualizar relaciones de padres e hijos
     actualizarRelacionesNodo(nuevoNodo, padres, hijos);
 
-    // Actualizar atributos del nodo con la información obtenida
     nuevoNodo.setNumeral(numeral);
     nuevoNodo.setMote(mote);
     nuevoNodo.setTituloNobiliario(tituloNobiliario);
     nuevoNodo.setAntecedentes(antecedentes);
 
-    // Insertar en la tabla hash si no estaba previamente
     if (!tablaHashPersonas.contiene(nombreCompleto)) {
         tablaHashPersonas.insertar(nuevoNodo);
     }
@@ -249,8 +221,6 @@ private NodoPersona parsearNodoPersona(JsonObject integranteJson, String nombreC
     return nuevoNodo;
 }
 
-
-    
 
     /**
     * Actualiza las relaciones del nodo con sus padres e hijos evitando duplicados.
@@ -495,3 +465,4 @@ private NodoPersona parsearNodoPersona(JsonObject integranteJson, String nombreC
         return integrantes;
     }
 }
+
