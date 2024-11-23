@@ -12,6 +12,7 @@ package proyecto2edd;
  *
  * @author Cesar Augusto, Christian Goncalves, Tomas Paraco
  */
+
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -47,7 +48,13 @@ public class Arbol {
         }
     }
 
-    private NodoPersona buscarNodo(String nombreCompleto, NodoPersona actual) {
+    /**
+     * Método para buscar un nodo por nombre completo en el árbol.
+     * @param nombreCompleto Nombre completo del nodo a buscar.
+     * @param actual Nodo actual desde donde comenzar la búsqueda.
+     * @return NodoPersona encontrado o null si no se encuentra.
+     */
+    public NodoPersona buscarNodo(String nombreCompleto, NodoPersona actual) {
         if (actual == null) return null;
         if (actual.getNombreCompleto().equals(nombreCompleto)) return actual;
 
@@ -56,11 +63,12 @@ public class Arbol {
         ListaPersona.Nodo nodoHijo = hijos.getCabeza();
 
         while (nodoHijo != null && resultado == null) {
-            resultado = buscarNodo(nombreCompleto, nodoHijo.persona);
-            nodoHijo = nodoHijo.siguiente;
+            resultado = buscarNodo(nombreCompleto, nodoHijo.getPersona());
+            nodoHijo = nodoHijo.getSiguiente();
         }
         return resultado;
     }
+
     
     public void cargarArbolDesdeJSON(String rutaArchivo) {
         try (FileReader reader = new FileReader(rutaArchivo)) {
@@ -157,6 +165,7 @@ public class Arbol {
         return true;
     }
 
+    // En el método parsearNodoPersona de la clase Arbol
 private NodoPersona parsearNodoPersona(JsonObject integranteJson, String nombreCompleto) {
     // Valores por defecto
     String numeral = "Desconocido";
@@ -486,4 +495,3 @@ private NodoPersona parsearNodoPersona(JsonObject integranteJson, String nombreC
         return integrantes;
     }
 }
-
