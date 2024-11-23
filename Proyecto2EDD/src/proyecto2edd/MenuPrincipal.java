@@ -7,12 +7,17 @@ package proyecto2edd;
 import org.graphstream.graph.Graph;
 import org.graphstream.graph.implementations.SingleGraph;
 import org.graphstream.ui.view.Viewer;
+import org.graphstream.ui.swingViewer.SwingViewer;
+import org.graphstream.ui.swingViewer.ViewPanel;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import org.graphstream.ui.swing_viewer.ViewPanel;
+import java.io.FileReader;
+import java.io.IOException;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 /**
  *
@@ -26,6 +31,7 @@ import org.graphstream.ui.swing_viewer.ViewPanel;
 public class MenuPrincipal extends JFrame {
 
     private Graph graph;
+    private Arbol arbolGenealogico;
 
     /**
      * Constructor de MenuPrincipal.
@@ -46,9 +52,18 @@ public class MenuPrincipal extends JFrame {
         getContentPane().add(panelPrincipal);
 
         // Añadir el componente del grafo al panel
-        Viewer viewer = new Viewer(graph, Viewer.ThreadingModel.GRAPH_IN_ANOTHER_THREAD);
-        ViewPanel viewPanel = (ViewPanel) viewer.addDefaultView(false);  // No abrir en una nueva ventana
-        panelPrincipal.add(viewPanel, BorderLayout.CENTER);
+        Viewer viewer = new SwingViewer(graph, Viewer.ThreadingModel.GRAPH_IN_GUI_THREAD);
+        ViewPanel viewPanel = (ViewPanel) viewer.addDefaultView(false);  // Panel donde se muestra el grafo
+        viewer.enableAutoLayout();  // Habilitar el diseño automático para los nodos y aristas
+
+        if (viewPanel != null) {
+            // Ajustar la vista para que todo el grafo sea visible dentro del panel
+            viewer.getDefaultView().getCamera().setViewPercent(1.0);  
+            viewer.getDefaultView().getCamera().resetView();  // Restablecer la vista para centrar el grafo
+            panelPrincipal.add(viewPanel, BorderLayout.CENTER);  // Añadir el panel al panel principal
+        } else {
+            System.out.println("Error: La vista generada no es de tipo ViewPanel");
+        }
 
         // Añadir el panel de botones
         JPanel panelBotones = new JPanel();
@@ -83,6 +98,16 @@ public class MenuPrincipal extends JFrame {
                 buscarPorNombre();
             }
         });
+
+        // Botón para mostrar antepasados
+        JButton btnMostrarAntepasados = new JButton("Mostrar Antepasados");
+        panelBotones.add(btnMostrarAntepasados);
+        btnMostrarAntepasados.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                mostrarAntepasados();
+            }
+        });
     }
 
     /**
@@ -111,9 +136,14 @@ public class MenuPrincipal extends JFrame {
         if (result == JFileChooser.APPROVE_OPTION) {
             // Ruta del archivo seleccionado
             String rutaArchivo = fileChooser.getSelectedFile().getPath();
-            // Lógica para cargar el árbol genealógico desde el archivo
-            System.out.println("Cargando árbol genealógico desde: " + rutaArchivo);
-            // TODO: Implementar la lógica para cargar el árbol genealógico
+            try (FileReader reader = new FileReader(rutaArchivo)) {
+                JsonObject jsonObject = JsonParser.parseReader(reader).getAsJsonObject();
+                arbolGenealogico = new Arbol();
+                arbolGenealogico.cargarArbolDesdeJSON(rutaArchivo);
+                System.out.println("Árbol genealógico cargado correctamente.");
+            } catch (IOException e) {
+                System.out.println("Error al leer el archivo: " + e.getMessage());
+            }
         }
     }
 
@@ -121,11 +151,16 @@ public class MenuPrincipal extends JFrame {
      * Método para ver el registro de un integrante del árbol genealógico.
      */
     private void verRegistro() {
-        // Lógica para ver el registro
         String nombreIntegrante = JOptionPane.showInputDialog(this, "Ingrese el nombre del integrante:");
-        if (nombreIntegrante != null) {
-            System.out.println("Mostrando registro de: " + nombreIntegrante);
-            // TODO: Implementar la lógica para mostrar el registro del integrante
+        if (nombreIntegrante != null && arbolGenealogico != null) {
+            NodoPersona persona = arbolGenealogico.buscarNodo(nombreIntegrante, arbolGenealogico.obtenerRaiz());
+            if (persona != null) {
+                JOptionPane.showMessageDialog(this, persona.toString(), "Registro de " + nombreIntegrante, JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this, "Integrante no encontrado.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        } else {
+            JOptionPane.showMessageDialog(this, "Primero cargue un árbol genealógico.", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -133,11 +168,28 @@ public class MenuPrincipal extends JFrame {
      * Método para buscar un integrante por su nombre en el árbol genealógico.
      */
     private void buscarPorNombre() {
-        // Lógica para buscar por nombre
         String nombreBusqueda = JOptionPane.showInputDialog(this, "Ingrese el nombre a buscar:");
-        if (nombreBusqueda != null) {
-            System.out.println("Buscando integrante con nombre: " + nombreBusqueda);
-            // TODO: Implementar la lógica para buscar el integrante por nombre
+        if (nombreBusqueda != null && arbolGenealogico != null) {
+            NodoPersona persona = arbolGenealogico.buscarNodo(nombreBusqueda, arbolGenealogico.obtenerRaiz());
+            if (persona != null) {
+                JOptionPane.showMessageDialog(this, persona.toString(), "Resultado de búsqueda", JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this, "Integrante no encontrado.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        } else {
+            JOptionPane.showMessageDialog(this, "Primero cargue un árbol genealógico.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    /**
+     * Método para mostrar los antepasados de un integrante específico del árbol genealógico.
+     */
+    private void mostrarAntepasados() {
+        String nombreIntegrante = JOptionPane.showInputDialog(this, "Ingrese el nombre del integrante:");
+        if (nombreIntegrante != null && arbolGenealogico != null) {
+            arbolGenealogico.mostrarAntepasadosGraficamente(nombreIntegrante);
+        } else {
+            JOptionPane.showMessageDialog(this, "Primero cargue un árbol genealógico.", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
