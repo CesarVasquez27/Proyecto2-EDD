@@ -21,6 +21,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import org.graphstream.graph.Graph;
 import org.graphstream.graph.implementations.SingleGraph;
+import javax.swing.JOptionPane;
 
 public class Arbol {
     private NodoPersona raiz;
@@ -70,54 +71,44 @@ public class Arbol {
     }
 
     
-    public void cargarArbolDesdeJSON(String rutaArchivo) {
-        try (FileReader reader = new FileReader(rutaArchivo)) {
-            Gson gson = new Gson();
-            JsonObject jsonObject = gson.fromJson(reader, JsonObject.class);
+    public void cargarArbolDesdeJSON(JsonObject jsonObject) {
+        // Validar el JSON antes de procesarlo
+        if (!validarJSON(jsonObject)) {
+            JOptionPane.showMessageDialog(null, "El archivo JSON tiene datos malformados. Por favor, revisa su contenido.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
 
-            // Validar el JSON antes de procesarlo
-            if (!validarJSON(jsonObject)) {
-                System.out.println("El archivo JSON tiene datos malformados. Por favor, revisa su contenido.");
-                return;
-            }
+        // Procesar cada linaje dentro del JSON
+        for (String nombreCasa : jsonObject.keySet()) {
+            JsonArray integrantes = jsonObject.getAsJsonArray(nombreCasa);
+            for (int i = 0; i < integrantes.size(); i++) {
+                JsonObject personajeJson = integrantes.get(i).getAsJsonObject();
 
-            // Procesar cada linaje dentro del JSON
-            for (String nombreCasa : jsonObject.keySet()) {
-                JsonArray integrantes = jsonObject.getAsJsonArray(nombreCasa);
-                for (int i = 0; i < integrantes.size(); i++) {
-                    JsonObject personajeJson = integrantes.get(i).getAsJsonObject();
+                // Iterar sobre cada personaje dentro de la casa
+                for (String nombreCompleto : personajeJson.keySet()) {
+                    JsonArray atributos = personajeJson.getAsJsonArray(nombreCompleto);
 
-                    // Iterar sobre cada personaje dentro de la casa
-                    for (String nombreCompleto : personajeJson.keySet()) {
-                        JsonArray atributos = personajeJson.getAsJsonArray(nombreCompleto);
+                    // Crear el nodo desde los atributos
+                    NodoPersona nuevoNodo = parsearNodoPersona(nombreCompleto, atributos);
 
-                        // Crear el nodo desde los atributos
-                        NodoPersona nuevoNodo = parsearNodoPersona(nombreCompleto, atributos);
+                    // Validar si ya existe el nodo en la tabla hash
+                    if (!tablaHashPersonas.contiene(nuevoNodo.getNombreCompleto())) {
+                        tablaHashPersonas.insertar(nuevoNodo);
 
-                        // Validar si ya existe el nodo en la tabla hash
-                        if (!tablaHashPersonas.contiene(nuevoNodo.getNombreCompleto())) {
-                            tablaHashPersonas.insertar(nuevoNodo);
-
-                            // Establecer la raíz si no tiene padre
-                            if (nuevoNodo.getPadre() == null) {
-                                establecerRaiz(nuevoNodo);
-                            } else {
-                                // Agregar el nodo al árbol como hijo del padre
-                                agregarNodo(nuevoNodo.getPadre().getNombreCompleto(), nuevoNodo);
-                            }
+                        // Establecer la raíz si no tiene padre
+                        if (nuevoNodo.getPadre() == null) {
+                            establecerRaiz(nuevoNodo);
+                        } else {
+                            // Agregar el nodo al árbol como hijo del padre
+                            agregarNodo(nuevoNodo.getPadre().getNombreCompleto(), nuevoNodo);
                         }
                     }
                 }
-
-                System.out.println("Linaje cargado: " + nombreCasa);
             }
-        } catch (IOException e) {
-            System.out.println("Error al leer el archivo: " + e.getMessage());
-        } catch (Exception e) {
-            System.out.println("Error inesperado al procesar el archivo JSON: " + e.getMessage());
+
+            JOptionPane.showMessageDialog(null, "Linaje cargado: " + nombreCasa, "Información", JOptionPane.INFORMATION_MESSAGE);
         }
     }
-
 
     /**
     * Método para validar que el archivo JSON tenga el formato esperado.
@@ -127,56 +118,53 @@ public class Arbol {
             JsonElement casaElement = jsonObject.get(nombreCasa);
 
             if (!casaElement.isJsonArray()) {
-                System.err.println("Error: '" + nombreCasa + "' no contiene un arreglo válido.");
+                JOptionPane.showMessageDialog(null, "Error: '" + nombreCasa + "' no contiene un arreglo válido.", "Error", JOptionPane.ERROR_MESSAGE);
                 return false;
             }
 
             JsonArray integrantes = casaElement.getAsJsonArray();
             for (JsonElement integranteElement : integrantes) {
                 if (!integranteElement.isJsonObject()) {
-                    System.err.println("Error: Uno de los integrantes en '" + nombreCasa + "' no es un objeto válido.");
+                    JOptionPane.showMessageDialog(null, "Error: Uno de los integrantes en '" + nombreCasa + "' no es un objeto válido.", "Error", JOptionPane.ERROR_MESSAGE);
                     return false;
                 }
 
-                JsonObject integrante = integranteElement.getAsJsonObject();
-                for (String nombreCompleto : integrante.keySet()) {
-                    JsonElement atributosElement = integrante.get(nombreCompleto);
+            JsonObject integrante = integranteElement.getAsJsonObject();
+            for (String nombreCompleto : integrante.keySet()) {
+                JsonElement atributosElement = integrante.get(nombreCompleto);
 
-                    if (!atributosElement.isJsonArray()) {
-                        System.err.println("Error: Los atributos de '" + nombreCompleto + "' no son un arreglo válido.");
+                if (!atributosElement.isJsonArray()) {
+                    JOptionPane.showMessageDialog(null, "Error: Los atributos de '" + nombreCompleto + "' no son un arreglo válido.", "Error", JOptionPane.ERROR_MESSAGE);
+                    return false;
+                }
+
+                JsonArray atributos = atributosElement.getAsJsonArray();
+                boolean tieneOfHisName = false;
+
+                for (JsonElement atributoElement : atributos) {
+                    if (!atributoElement.isJsonObject()) {
+                        JOptionPane.showMessageDialog(null, "Error: Uno de los atributos de '" + nombreCompleto + "' no es un objeto válido.", "Error", JOptionPane.ERROR_MESSAGE);
                         return false;
                     }
 
-                    JsonArray atributos = atributosElement.getAsJsonArray();
-                    boolean tieneOfHisName = false;
+                    JsonObject atributo = atributoElement.getAsJsonObject();
 
-                    for (JsonElement atributoElement : atributos) {
-                        if (!atributoElement.isJsonObject()) {
-                            System.err.println("Error: Uno de los atributos de '" + nombreCompleto + "' no es un objeto válido.");
-                            return false;
-                        }
-
-                        JsonObject atributo = atributoElement.getAsJsonObject();
-
-                        // Validar si el campo "Of his name" está presente y es válido
-                        if (atributo.has("Of his name") && atributo.get("Of his name").isJsonPrimitive()) {
-                            tieneOfHisName = true;
-                        }
+                    // Validar si el campo "Of his name" está presente y es válido
+                    if (atributo.has("Of his name") && atributo.get("Of his name").isJsonPrimitive()) {
+                        tieneOfHisName = true;
                     }
+                }
 
-                    // Si no se encontró el campo "Of his name", generar un error
-                    if (!tieneOfHisName) {
-                        System.err.println("Error: El integrante '" + nombreCompleto + "' no contiene un nombre válido ('Of his name').");
-                        return false;
-                    }
+                // Si no se encontró el campo "Of his name", generar un error
+                if (!tieneOfHisName) {
+                    JOptionPane.showMessageDialog(null, "Error: El integrante '" + nombreCompleto + "' no contiene un nombre válido ('Of his name').", "Error", JOptionPane.ERROR_MESSAGE);
+                    return false;
                 }
             }
         }
-        return true;
     }
-
-
-
+    return true;
+}
 
 
     private NodoPersona parsearNodoPersona(String nombreCompleto, JsonArray atributos) {
@@ -550,4 +538,3 @@ public class Arbol {
         return integrantes;
     }
 }
-
