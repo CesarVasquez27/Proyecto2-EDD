@@ -9,18 +9,14 @@ import org.graphstream.graph.implementations.SingleGraph;
 import org.graphstream.ui.view.Viewer;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.FileReader;
 import java.io.IOException;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.google.gson.JsonSyntaxException;
 import org.graphstream.ui.swing_viewer.SwingViewer;
 import org.graphstream.ui.swing_viewer.ViewPanel;
-
-/**
- *
- * @author tomas
- */
 
 /**
  * Clase principal para la interfaz gráfica del Visor de Árbol Genealógico.
@@ -84,6 +80,14 @@ public class MenuPrincipal extends JFrame {
             }
         """;
         graph.setAttribute("ui.stylesheet", stylesheet);
+
+        // Inicializar el Viewer
+        Viewer viewer = new SwingViewer(graph, Viewer.ThreadingModel.GRAPH_IN_GUI_THREAD);
+        viewer.enableAutoLayout();
+
+        // Crear el ViewPanel y añadirlo a la interfaz
+        ViewPanel viewPanel = (ViewPanel) viewer.addDefaultView(false);
+        this.add(viewPanel, BorderLayout.CENTER);
     }
 
     /**
@@ -94,22 +98,42 @@ public class MenuPrincipal extends JFrame {
         // Botón para cargar un árbol genealógico
         JButton btnCargarArbol = new JButton("Cargar Árbol Genealógico");
         panelBotones.add(btnCargarArbol);
-        btnCargarArbol.addActionListener(e -> cargarArbolGenealogico());
+        btnCargarArbol.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                cargarArbolGenealogico();
+            }
+        });
 
         // Botón para ver registro
         JButton btnVerRegistro = new JButton("Ver Registro");
         panelBotones.add(btnVerRegistro);
-        btnVerRegistro.addActionListener(e -> verRegistro());
+        btnVerRegistro.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                verRegistro();
+            }
+        });
 
         // Botón para buscar por nombre
         JButton btnBuscarPorNombre = new JButton("Buscar por Nombre");
         panelBotones.add(btnBuscarPorNombre);
-        btnBuscarPorNombre.addActionListener(e -> buscarPorNombre());
+        btnBuscarPorNombre.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                buscarPorNombre();
+            }
+        });
 
         // Botón para mostrar antepasados
         JButton btnMostrarAntepasados = new JButton("Mostrar Antepasados");
         panelBotones.add(btnMostrarAntepasados);
-        btnMostrarAntepasados.addActionListener(e -> mostrarAntepasados());
+        btnMostrarAntepasados.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                mostrarAntepasados();
+            }
+        });
     }
 
     /**
@@ -120,25 +144,14 @@ public class MenuPrincipal extends JFrame {
         int result = fileChooser.showOpenDialog(this);
         if (result == JFileChooser.APPROVE_OPTION) {
             String rutaArchivo = fileChooser.getSelectedFile().getPath();
-
-            // Verificar si el archivo tiene la extensión .json
-            if (!rutaArchivo.toLowerCase().endsWith(".json")) {
-                JOptionPane.showMessageDialog(this, "Archivo incorrecto. Por favor, selecciona un archivo JSON.", "Error", JOptionPane.ERROR_MESSAGE);
-                return; // Salir del método si el archivo no es JSON
-            }
-
             try (FileReader reader = new FileReader(rutaArchivo)) {
                 JsonObject jsonObject = JsonParser.parseReader(reader).getAsJsonObject();
                 arbolGenealogico = new Arbol();
-                arbolGenealogico.cargarArbolDesdeJSON(jsonObject); // Cambiado para pasar el objeto JSON
+                arbolGenealogico.cargarArbolDesdeJSON(rutaArchivo);
                 actualizarGrafo();
                 JOptionPane.showMessageDialog(this, "Árbol genealógico cargado correctamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
             } catch (IOException e) {
                 JOptionPane.showMessageDialog(this, "Error al cargar el archivo: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-            } catch (JsonSyntaxException e) {
-                JOptionPane.showMessageDialog(this, "Error de formato en el archivo JSON: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-            } catch (Exception e) {
-                JOptionPane.showMessageDialog(this, "Error inesperado: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
     }
@@ -164,21 +177,24 @@ public class MenuPrincipal extends JFrame {
         }
 
         String nombreIntegrante = JOptionPane.showInputDialog(this, "Ingrese el nombre del integrante:");
-        if (nombreIntegrante != null) {
-            NodoPersona persona = arbolGenealogico.buscarNodo(nombreIntegrante, arbolGenealogico.obtenerRaiz());
+        if (nombreIntegrante != null && !nombreIntegrante.trim().isEmpty()) {
+            // Buscar en la tabla hash
+            NodoPersona persona = arbolGenealogico.buscarEnTablaHash(nombreIntegrante.trim());
             if (persona != null) {
                 JOptionPane.showMessageDialog(this, persona.toString(), "Registro de " + nombreIntegrante, JOptionPane.INFORMATION_MESSAGE);
             } else {
                 JOptionPane.showMessageDialog(this, "Integrante no encontrado.", "Error", JOptionPane.ERROR_MESSAGE);
             }
+        } else {
+            JOptionPane.showMessageDialog(this, "El nombre ingresado no es válido.", "Advertencia", JOptionPane.WARNING_MESSAGE);
         }
     }
+
 
     /**
      * Método para buscar un integrante por su nombre.
      */
     private void buscarPorNombre() {
-        // Similar a verRegistro, pero adaptado para búsquedas generales
         verRegistro();
     }
 
