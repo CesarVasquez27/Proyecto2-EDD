@@ -13,12 +13,9 @@ package proyecto2edd;
  * @author Cesar Augusto, Christian Goncalves, Tomas Paraco
  */
 
-import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import java.io.FileReader;
-import java.io.IOException;
 import org.graphstream.graph.Graph;
 import org.graphstream.graph.implementations.SingleGraph;
 import javax.swing.JOptionPane;
