@@ -9,12 +9,11 @@ import org.graphstream.graph.implementations.SingleGraph;
 import org.graphstream.ui.view.Viewer;
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.io.FileReader;
 import java.io.IOException;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.JsonSyntaxException;
 import org.graphstream.ui.swing_viewer.SwingViewer;
 import org.graphstream.ui.swing_viewer.ViewPanel;
 
@@ -121,14 +120,25 @@ public class MenuPrincipal extends JFrame {
         int result = fileChooser.showOpenDialog(this);
         if (result == JFileChooser.APPROVE_OPTION) {
             String rutaArchivo = fileChooser.getSelectedFile().getPath();
+
+            // Verificar si el archivo tiene la extensión .json
+            if (!rutaArchivo.toLowerCase().endsWith(".json")) {
+                JOptionPane.showMessageDialog(this, "Archivo incorrecto. Por favor, selecciona un archivo JSON.", "Error", JOptionPane.ERROR_MESSAGE);
+                return; // Salir del método si el archivo no es JSON
+            }
+
             try (FileReader reader = new FileReader(rutaArchivo)) {
                 JsonObject jsonObject = JsonParser.parseReader(reader).getAsJsonObject();
                 arbolGenealogico = new Arbol();
-                arbolGenealogico.cargarArbolDesdeJSON(rutaArchivo);
+                arbolGenealogico.cargarArbolDesdeJSON(jsonObject); // Cambiado para pasar el objeto JSON
                 actualizarGrafo();
                 JOptionPane.showMessageDialog(this, "Árbol genealógico cargado correctamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
             } catch (IOException e) {
                 JOptionPane.showMessageDialog(this, "Error al cargar el archivo: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            } catch (JsonSyntaxException e) {
+                JOptionPane.showMessageDialog(this, "Error de formato en el archivo JSON: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this, "Error inesperado: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
     }
