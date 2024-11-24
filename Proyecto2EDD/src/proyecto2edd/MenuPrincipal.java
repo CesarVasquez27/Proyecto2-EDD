@@ -43,7 +43,7 @@ public class MenuPrincipal extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
-        // Inicializar el grafo
+        // Inicializar el grafo visual
         inicializarGrafo();
 
         // Crear panel principal y añadir componentes
@@ -52,78 +52,65 @@ public class MenuPrincipal extends JFrame {
 
         // Añadir el componente del grafo al panel
         Viewer viewer = new SwingViewer(graph, Viewer.ThreadingModel.GRAPH_IN_GUI_THREAD);
-        ViewPanel viewPanel = (ViewPanel) viewer.addDefaultView(false);  // Panel donde se muestra el grafo
-        viewer.enableAutoLayout();  // Habilitar el diseño automático para los nodos y aristas
+        ViewPanel viewPanel = (ViewPanel) viewer.addDefaultView(false);
+        viewer.enableAutoLayout();
 
-        if (viewPanel != null) {
-            // Ajustar la vista para que todo el grafo sea visible dentro del panel
-            viewer.getDefaultView().getCamera().setViewPercent(1.0);  
-            viewer.getDefaultView().getCamera().resetView();  // Restablecer la vista para centrar el grafo
-            panelPrincipal.add(viewPanel, BorderLayout.CENTER);  // Añadir el panel al panel principal
-        } else {
-            System.out.println("Error: La vista generada no es de tipo ViewPanel");
-        }
+        panelPrincipal.add(viewPanel, BorderLayout.CENTER);
 
         // Añadir el panel de botones
         JPanel panelBotones = new JPanel();
         panelPrincipal.add(panelBotones, BorderLayout.SOUTH);
 
-        // Botón para cargar un nuevo árbol genealógico
-        JButton btnCargarArbol = new JButton("Cargar Árbol Genealógico");
-        panelBotones.add(btnCargarArbol);
-        btnCargarArbol.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                cargarArbolGenealogico();
-            }
-        });
-
-        // Botón para ver registro
-        JButton btnVerRegistro = new JButton("Ver Registro");
-        panelBotones.add(btnVerRegistro);
-        btnVerRegistro.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                verRegistro();
-            }
-        });
-
-        // Botón para buscar por nombre
-        JButton btnBuscarPorNombre = new JButton("Buscar por Nombre");
-        panelBotones.add(btnBuscarPorNombre);
-        btnBuscarPorNombre.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                buscarPorNombre();
-            }
-        });
-
-        // Botón para mostrar antepasados
-        JButton btnMostrarAntepasados = new JButton("Mostrar Antepasados");
-        panelBotones.add(btnMostrarAntepasados);
-        btnMostrarAntepasados.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                mostrarAntepasados();
-            }
-        });
+        // Botones
+        agregarBotones(panelBotones);
     }
 
     /**
-     * Inicializa el grafo con algunos nodos de ejemplo.
+     * Inicializa el grafo visual con un diseño básico.
      */
     private void inicializarGrafo() {
         graph = new SingleGraph("Árbol Genealógico");
 
-        // Estilos opcionales para el grafo
-        graph.setAttribute("ui.stylesheet", "node { fill-color: red; } node.marked { fill-color: blue; }");
+        // Estilo del grafo
+        String stylesheet = """
+            node {
+                fill-color: red;
+                size: 20px;
+                text-size: 15px;
+                text-alignment: center;
+            }
+            edge {
+                fill-color: gray;
+                size: 2px;
+            }
+        """;
+        graph.setAttribute("ui.stylesheet", stylesheet);
+    }
 
-        graph.addNode("Padre").setAttribute("ui.label", "Padre");
-        graph.addNode("Hijo1").setAttribute("ui.label", "Hijo1");
-        graph.addNode("Hijo2").setAttribute("ui.label", "Hijo2");
+    /**
+     * Añade los botones al panel inferior.
+     * @param panelBotones Panel donde se añaden los botones.
+     */
+    private void agregarBotones(JPanel panelBotones) {
+        // Botón para cargar un árbol genealógico
+        JButton btnCargarArbol = new JButton("Cargar Árbol Genealógico");
+        panelBotones.add(btnCargarArbol);
+        btnCargarArbol.addActionListener(e -> cargarArbolGenealogico());
 
-        graph.addEdge("Padre-Hijo1", "Padre", "Hijo1");
-        graph.addEdge("Padre-Hijo2", "Padre", "Hijo2");
+        // Botón para ver registro
+        JButton btnVerRegistro = new JButton("Ver Registro");
+        panelBotones.add(btnVerRegistro);
+        btnVerRegistro.addActionListener(e -> verRegistro());
+
+        // Botón para buscar por nombre
+        JButton btnBuscarPorNombre = new JButton("Buscar por Nombre");
+        panelBotones.add(btnBuscarPorNombre);
+        btnBuscarPorNombre.addActionListener(e -> buscarPorNombre());
+
+        // Botón para mostrar antepasados
+        JButton btnMostrarAntepasados = new JButton("Mostrar Antepasados");
+        panelBotones.add(btnMostrarAntepasados);
+        btnMostrarAntepasados.addActionListener(e -> mostrarAntepasados());
     }
 
     /**
@@ -133,16 +120,27 @@ public class MenuPrincipal extends JFrame {
         JFileChooser fileChooser = new JFileChooser();
         int result = fileChooser.showOpenDialog(this);
         if (result == JFileChooser.APPROVE_OPTION) {
-            // Ruta del archivo seleccionado
             String rutaArchivo = fileChooser.getSelectedFile().getPath();
             try (FileReader reader = new FileReader(rutaArchivo)) {
                 JsonObject jsonObject = JsonParser.parseReader(reader).getAsJsonObject();
                 arbolGenealogico = new Arbol();
                 arbolGenealogico.cargarArbolDesdeJSON(rutaArchivo);
-                System.out.println("Árbol genealógico cargado correctamente.");
+                actualizarGrafo();
+                JOptionPane.showMessageDialog(this, "Árbol genealógico cargado correctamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
             } catch (IOException e) {
-                System.out.println("Error al leer el archivo: " + e.getMessage());
+                JOptionPane.showMessageDialog(this, "Error al cargar el archivo: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             }
+        }
+    }
+
+    /**
+     * Actualiza el grafo visual basado en el árbol genealógico cargado.
+     */
+    private void actualizarGrafo() {
+        try {
+            arbolGenealogico.mostrarArbolGraficamente(graph);
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Error al mostrar el árbol: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -150,51 +148,48 @@ public class MenuPrincipal extends JFrame {
      * Método para ver el registro de un integrante del árbol genealógico.
      */
     private void verRegistro() {
+        if (arbolGenealogico == null) {
+            JOptionPane.showMessageDialog(this, "Primero cargue un árbol genealógico.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
         String nombreIntegrante = JOptionPane.showInputDialog(this, "Ingrese el nombre del integrante:");
-        if (nombreIntegrante != null && arbolGenealogico != null) {
+        if (nombreIntegrante != null) {
             NodoPersona persona = arbolGenealogico.buscarNodo(nombreIntegrante, arbolGenealogico.obtenerRaiz());
             if (persona != null) {
                 JOptionPane.showMessageDialog(this, persona.toString(), "Registro de " + nombreIntegrante, JOptionPane.INFORMATION_MESSAGE);
             } else {
                 JOptionPane.showMessageDialog(this, "Integrante no encontrado.", "Error", JOptionPane.ERROR_MESSAGE);
             }
-        } else {
-            JOptionPane.showMessageDialog(this, "Primero cargue un árbol genealógico.", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
     /**
-     * Método para buscar un integrante por su nombre en el árbol genealógico.
+     * Método para buscar un integrante por su nombre.
      */
     private void buscarPorNombre() {
-        String nombreBusqueda = JOptionPane.showInputDialog(this, "Ingrese el nombre a buscar:");
-        if (nombreBusqueda != null && arbolGenealogico != null) {
-            NodoPersona persona = arbolGenealogico.buscarNodo(nombreBusqueda, arbolGenealogico.obtenerRaiz());
-            if (persona != null) {
-                JOptionPane.showMessageDialog(this, persona.toString(), "Resultado de búsqueda", JOptionPane.INFORMATION_MESSAGE);
-            } else {
-                JOptionPane.showMessageDialog(this, "Integrante no encontrado.", "Error", JOptionPane.ERROR_MESSAGE);
-            }
-        } else {
-            JOptionPane.showMessageDialog(this, "Primero cargue un árbol genealógico.", "Error", JOptionPane.ERROR_MESSAGE);
-        }
+        // Similar a verRegistro, pero adaptado para búsquedas generales
+        verRegistro();
     }
 
     /**
-     * Método para mostrar los antepasados de un integrante específico del árbol genealógico.
+     * Método para mostrar los antepasados de un integrante.
      */
     private void mostrarAntepasados() {
-        String nombreIntegrante = JOptionPane.showInputDialog(this, "Ingrese el nombre del integrante:");
-        if (nombreIntegrante != null && arbolGenealogico != null) {
-            arbolGenealogico.mostrarAntepasadosGraficamente(nombreIntegrante);
-        } else {
+        if (arbolGenealogico == null) {
             JOptionPane.showMessageDialog(this, "Primero cargue un árbol genealógico.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        String nombreIntegrante = JOptionPane.showInputDialog(this, "Ingrese el nombre del integrante:");
+        if (nombreIntegrante != null) {
+            arbolGenealogico.mostrarAntepasadosGraficamente(nombreIntegrante);
         }
     }
 
     /**
      * Método principal para ejecutar la aplicación.
-     * @param args Argumentos de línea de comandos (no utilizados).
+     * @param args
      */
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> new MenuPrincipal().setVisible(true));

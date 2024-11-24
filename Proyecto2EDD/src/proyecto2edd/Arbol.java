@@ -302,34 +302,57 @@ public class Arbol {
         }
     }
 
-    public void mostrarArbolGraficamente() {
-        if (raiz == null) {
-            System.out.println("No hay un árbol cargado para mostrar.");
-            return;
+    public void mostrarArbolGraficamente(Graph graph) {
+        try {
+            // Limpiar el grafo antes de agregar nuevos nodos
+            graph.clear();
+
+            // Obtener la raíz del árbol genealógico
+            NodoPersona raiz = obtenerRaiz(); // Método que obtendría la raíz del árbol
+            if (raiz == null) {
+                System.out.println("El árbol está vacío.");
+                return;
+            }
+
+            // Llamar a la función recursiva para agregar nodos y enlaces
+            agregarNodosYEnlacesGraficamente(raiz, graph);
+
+            System.out.println("Árbol genealógico mostrado correctamente.");
+        } catch (Exception e) {
+            System.err.println("Error al mostrar el árbol gráficamente: " + e.getMessage());
         }
-        Graph grafo = new SingleGraph("Árbol Genealógico");
-        grafo.setStrict(false);
-        grafo.setAutoCreate(true);
-        agregarNodosYEnlacesGraficamente(raiz, grafo);
-        grafo.display();
     }
+
 
     private void agregarNodosYEnlacesGraficamente(NodoPersona nodo, Graph grafo) {
         if (nodo == null) return;
+
         String nodoId = nodo.getNombreCompleto();
-        grafo.addNode(nodoId).setAttribute("ui.label", nodo.getNombreCompleto());
+        if (grafo.getNode(nodoId) == null) {
+            grafo.addNode(nodoId).setAttribute("ui.label", nodo.getNombreCompleto());
+        }
+
         ListaPersona hijos = nodo.getHijos();
-        ListaPersona.Nodo nodoHijo = hijos.getCabeza();
-        while (nodoHijo != null) {
-            NodoPersona hijo = nodoHijo.persona;
-            String hijoId = hijo.getNombreCompleto();
-            
-            grafo.addNode(hijoId).setAttribute("ui.label", hijo.getNombreCompleto());
-            grafo.addEdge(nodoId + "-" + hijoId, nodoId, hijoId);
-            agregarNodosYEnlacesGraficamente(hijo, grafo);
-            nodoHijo = nodoHijo.siguiente;
+        if (hijos != null) {
+            ListaPersona.Nodo nodoHijo = hijos.getCabeza();
+            while (nodoHijo != null) {
+                NodoPersona hijo = nodoHijo.persona;
+                String hijoId = hijo.getNombreCompleto();
+
+                if (grafo.getNode(hijoId) == null) {
+                    grafo.addNode(hijoId).setAttribute("ui.label", hijo.getNombreCompleto());
+                }
+
+                if (grafo.getEdge(nodoId + "-" + hijoId) == null) {
+                    grafo.addEdge(nodoId + "-" + hijoId, nodoId, hijoId);
+                }
+
+                agregarNodosYEnlacesGraficamente(hijo, grafo);
+                nodoHijo = nodoHijo.siguiente;
+            }
         }
     }
+
     
     /**
     * Obtiene una lista de antepasados para un nodo dado.
@@ -338,12 +361,19 @@ public class Arbol {
     */
     public ListaPersona obtenerAntepasados(NodoPersona nodo) {
         ListaPersona antepasados = new ListaPersona();
+
+        if (nodo == null) {
+            System.out.println("El nodo proporcionado es nulo. No se pueden obtener antepasados.");
+            return antepasados;
+        }
+
         NodoPersona actual = nodo.getPadre(); // Comenzar con el padre inmediato
 
         while (actual != null) {
             antepasados.agregar(actual); // Agregar a la lista
             actual = actual.getPadre(); // Subir un nivel
         }
+
         return antepasados;
     }
     
@@ -359,35 +389,41 @@ public class Arbol {
             return;
         }
 
-        // Obtener la lista de antepasados
         ListaPersona antepasados = obtenerAntepasados(nodo);
 
-        // Configurar el grafo
+        if (antepasados.estaVacia()) {
+            System.out.println("No se encontraron antepasados para " + nombreIntegrante);
+            return;
+        }
+
         Graph grafo = new SingleGraph("Antepasados de " + nombreIntegrante);
         grafo.setStrict(false);
         grafo.setAutoCreate(true);
 
-        // Agregar nodo raíz
         String nodoId = nodo.getNombreCompleto();
         grafo.addNode(nodoId).setAttribute("ui.label", nodo.getNombreCompleto());
 
-        // Construir el grafo a partir de los antepasados
         ListaPersona.Nodo nodoAntepasado = antepasados.getCabeza();
         NodoPersona anterior = nodo;
         while (nodoAntepasado != null) {
             NodoPersona antepasado = nodoAntepasado.getPersona();
             String antepasadoId = antepasado.getNombreCompleto();
 
-            grafo.addNode(antepasadoId).setAttribute("ui.label", antepasado.getNombreCompleto());
-            grafo.addEdge(anterior.getNombreCompleto() + "-" + antepasadoId, anterior.getNombreCompleto(), antepasadoId);
+            if (grafo.getNode(antepasadoId) == null) {
+                grafo.addNode(antepasadoId).setAttribute("ui.label", antepasado.getNombreCompleto());
+            }
 
-            anterior = antepasado; // Actualizar el nodo anterior
+            if (grafo.getEdge(anterior.getNombreCompleto() + "-" + antepasadoId) == null) {
+                grafo.addEdge(anterior.getNombreCompleto() + "-" + antepasadoId, anterior.getNombreCompleto(), antepasadoId);
+            }
+
+            anterior = antepasado;
             nodoAntepasado = nodoAntepasado.getSiguiente();
         }
 
-        // Mostrar el grafo
         grafo.display();
     }
+
     
     /**
     * Busca y muestra los registros que tienen un título nobiliario específico.
