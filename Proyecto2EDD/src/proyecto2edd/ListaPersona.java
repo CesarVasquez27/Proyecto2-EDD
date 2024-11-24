@@ -108,14 +108,14 @@ public class ListaPersona {
         return size;
     }
     
-    public boolean contiene(NodoPersona persona) {
-    Nodo actual = cabeza; // Cabeza de la lista enlazada
-    while (actual != null) {
-        if (actual.persona.equals(persona)) {
-            return true; // Encontramos la persona
+    public boolean contiene(NodoPersona nodo) {
+        Nodo actual = cabeza;
+        while (actual != null) {
+            if (actual.persona.equals(nodo)) {
+                return true;
+            }
+            actual = actual.siguiente;
         }
-        actual = actual.siguiente; // Pasar al siguiente nodo
-    }
-    return false; // No se encontró la persona
+        return false;
     }
 }

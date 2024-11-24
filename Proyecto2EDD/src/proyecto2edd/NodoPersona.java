@@ -14,7 +14,8 @@ public class NodoPersona {
     private NodoPersona padre;      // Referencia al padre
     private String mote;            // Apodo único
     private String tituloNobiliario; // Título nobiliario
-    private ListaPersona hijos;     // Lista de hijos
+    private final ListaPersona padres; // Lista de padres
+    private final ListaPersona hijos;     // Lista de hijos
     private String antecedentes;    // Información adicional
 
     // Constructor principal
@@ -31,11 +32,14 @@ public class NodoPersona {
     public NodoPersona(String nombreCompleto, String numeral, NodoPersona padre, String mote, String tituloNobiliario, String antecedentes) {
         this.nombreCompleto = nombreCompleto;
         this.numeral = numeral;
-        this.padre = padre;
         this.mote = mote;
         this.tituloNobiliario = tituloNobiliario;
         this.antecedentes = antecedentes;
-        this.hijos = new ListaPersona(); // Inicializamos la lista de hijos vacía
+        this.padres = new ListaPersona(); // Inicializar lista de padres
+        this.hijos = new ListaPersona();  // Inicializar lista de hijos
+        if (padre != null) {
+            this.padres.agregar(padre); // Agregar padre si se pasa en el constructor
+        }
     }
 
     // getters y setters
@@ -95,6 +99,20 @@ public class NodoPersona {
     public void setAntecedentes(String antecedentes) {
         this.antecedentes = antecedentes;
     }
+    
+    // Getter para la lista de padres
+    public ListaPersona getPadres() {
+        return padres;
+    }
+    
+    // Método para agregar un padre
+    public void agregarPadre(NodoPersona padre) {
+        if (!padres.contiene(padre)) { // Evitar duplicados
+            padres.agregar(padre);
+        }
+    }
+    
+    
 
     @Override
     public String toString() {

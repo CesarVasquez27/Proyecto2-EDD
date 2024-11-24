@@ -63,10 +63,15 @@ public class Hash {
 
     // Método para insertar un NodoPersona en la tabla de dispersión
     public void insertar(NodoPersona persona) {
+        // Verificar si la persona ya existe
+        if (contiene(persona.getMote())) {
+            return; // Si ya existe, no hacemos nada
+        }
+    
         if (numElementos >= tamanoTabla * FACTOR_CARGA) {
             redimensionar(); // Redimensionar si se supera el factor de carga
         }
-        
+    
         int indice = funcionHash(persona.getMote()); // Calculamos el índice usando la función hash
         tabla[indice].agregar(persona); // Agregamos la persona a la lista enlazada de ese índice
         numElementos++;
